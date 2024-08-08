@@ -4,6 +4,9 @@ namespace PigLatin;
 
 class Program
 {
+	// TODO adjust casing
+	// TODO skip bad words instead of erroring
+
 	static void Main(string[] args)
 	{
 		Console.WriteLine("Welcome to the Igpay Atinlay Translator!");
@@ -29,28 +32,71 @@ class Program
 		return line.Trim().ToLowerInvariant();
 	}
 
-	static bool TryConvert(string input, [NotNullWhen(true)] out string? converted)
+	// end is exclusive, start is inclusive
+	static bool TryConvert(Span<char> text, string original, ref int position, ref int cursor)
 	{
-		// no text
-		if (input is "")
+		const string vowels = "AEIOUaeiou";
+
+		int start = position;
+		int vowelIndex = -1;
+
+		// main character loop
+		for (; position < original.Length; position++)
 		{
-			converted = "";
+			char letter = original[position];
+
+			// blank space, stop and continue to next word
+			if (char.IsWhiteSpace(letter) || IsPunctuation(letter))
+				break;
+
+			// disallowed character
+			if (!IsValidLetter(letter))
+				return false;
+
+			// first vowel not yet found
+			if (vowelIndex < 0)
+			{
+				// set index
+				if (vowels.Contains(letter))
+					vowelIndex = position;
+				// keep searching
+				else
+					continue;
+			}
+
+			// output letter as is
+			text[cursor++] = letter;
 		}
 
-		// vowel
-		else if (input[0] is 'a' or 'e' or 'i' or 'o' or 'u')
+		// zero length
+		if (position - start != 0)
 		{
-			converted = input + "way";
+			// all consonants
+			if (vowelIndex < 0)
+			{
+				for (int i = start; i < position; i++)
+					text[cursor++] = original[i];
+			}
+
+			// copy front of word
+			else
+			{
+				for (int i = start; i < vowelIndex; i++)
+					text[cursor++] = original[i];
+			}
+
+			// suffix
+			if (start == vowelIndex) // starts with a vowel
+				text[cursor++] = 'w';
+			text[cursor++] = 'a';
+			text[cursor++] = 'y';
 		}
 
-		// consonant
-		else
+		// add whitespace if necessary
+		if (position < original.Length)
 		{
-			// get vowel index
-			int position = input.IndexOfAny(['a', 'e', 'i', 'o', 'u']);
-			converted = 
-				position == -1 ? input + "ay" : // all consonants?
-				input[position..] + input[..position] + "ay"; // vowel position found
+			text[cursor++] = original[position];
+			position++;
 		}
 
 		return true;
@@ -65,19 +111,45 @@ class Program
 		if (input is null or "")
 			return false;
 
-		string[] split = input.Split(' ');
-		string[] words = new string[split.Length];
+		// setup initial state
+		ConverterState state = new(input, 0);
+		// fill string
+		converted = string.Create(input.Length * 4, state, ConvertSentence);
+		// trim to size
+		converted = converted[..state.Position];
 
-		for (int i = 0; i < split.Length; i++)
-		{
-			if (TryConvert(split[i], out string? output))
-				words[i] = output;
-			else
-				return false;
-		}
-
-		converted = string.Join(' ', words);
 		return true;
+	}
+
+	static void ConvertSentence(Span<char> text, ConverterState state)
+	{
+		int cursor = 0;
+		while (state.Position < state.Original.Length)
+		{
+			if (!TryConvert(text, state.Original, ref state.Position, ref cursor))
+			{
+				state.Position = -1;
+				return;
+			}
+		}
+		state.Position = cursor;
+	}
+
+	static bool IsPunctuation(char letter)
+	{
+		const string punctuation = "\"/\\!?,.:;[](){}&";
+
+		return punctuation.Contains(letter);
+	}
+
+	static bool IsValidLetter(char letter)
+	{
+		// specifically allow apostrophes and hyphens
+		if (letter is '-' or '\'')
+			return true;
+
+		// anything else that isn't a letter is invalid
+		return letter is (>= 'A' and <= 'Z') or (>= 'a' and <= 'z');
 	}
 
 	static bool PromptYesNo(bool allowEscape, string message)
@@ -112,5 +184,11 @@ class Program
 					break;
 			}
 		}
+	}
+
+	public class ConverterState(string original, int position)
+	{
+		public string Original = original;
+		public int Position = position;
 	}
 }
