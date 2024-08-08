@@ -5,7 +5,6 @@ namespace PigLatin;
 class Program
 {
 	// TODO adjust casing
-	// TODO skip bad words instead of erroring
 
 	static void Main(string[] args)
 	{
@@ -33,12 +32,13 @@ class Program
 	}
 
 	// end is exclusive, start is inclusive
-	static bool TryConvert(Span<char> text, string original, ref int position, ref int cursor)
+	static void TryConvert(Span<char> text, string original, ref int position, ref int cursor)
 	{
 		const string vowels = "AEIOUaeiou";
 
 		int start = position;
 		int vowelIndex = -1;
+		bool hasSymbol = false;
 
 		// main character loop
 		for (; position < original.Length; position++)
@@ -49,27 +49,40 @@ class Program
 			if (char.IsWhiteSpace(letter) || IsPunctuation(letter))
 				break;
 
-			// disallowed character
-			if (!IsValidLetter(letter))
-				return false;
-
-			// first vowel not yet found
-			if (vowelIndex < 0)
+			if (!hasSymbol) 
 			{
-				// set index
-				if (vowels.Contains(letter))
-					vowelIndex = position;
-				// keep searching
-				else
-					continue;
+				// symbol found
+				if (!IsValidLetter(letter))
+				{
+					hasSymbol = true;
+
+					// move cursor to start of word
+					if (vowelIndex >= 0)
+						cursor -= position - start - 1;
+
+					// go back and print as-is
+					for (int i = start; i < position; i++)
+						text[cursor++] = original[i];
+
+					vowelIndex = -1;
+				}
+
+				// first vowel not yet found
+				else if (vowelIndex < 0)
+				{
+					if (vowels.Contains(letter))
+						vowelIndex = position; // set index
+					else
+						continue; // keep searching
+				}
 			}
 
 			// output letter as is
 			text[cursor++] = letter;
 		}
 
-		// zero length
-		if (position - start != 0)
+		// not empty and not containing symbols
+		if (position - start != 0 && !hasSymbol)
 		{
 			// all consonants
 			if (vowelIndex < 0)
@@ -98,8 +111,6 @@ class Program
 			text[cursor++] = original[position];
 			position++;
 		}
-
-		return true;
 	}
 
 	static bool TryConvertSentence(string? input, [NotNullWhen(true)] out string? converted)
@@ -115,14 +126,6 @@ class Program
 		ConverterState state = new(input, 0);
 		// fill string
 		converted = string.Create(input.Length * 4, state, ConvertSentence);
-
-		// invalid text
-		if (state.Position < 0)
-		{
-			converted = null;
-			return false;
-		}
-
 		// trim to size
 		converted = converted[..state.Position];
 
@@ -132,14 +135,11 @@ class Program
 	static void ConvertSentence(Span<char> text, ConverterState state)
 	{
 		int cursor = 0;
+
+		// iterate words, convert each
 		while (state.Position < state.Original.Length)
-		{
-			if (TryConvert(text, state.Original, ref state.Position, ref cursor))
-			{
-				state.Position = -1;
-				return;
-			}
-		}
+			TryConvert(text, state.Original, ref state.Position, ref cursor);
+
 		state.Position = cursor;
 	}
 
