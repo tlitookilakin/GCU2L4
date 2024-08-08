@@ -4,20 +4,22 @@ namespace PigLatin;
 
 class Program
 {
-	// TODO adjust casing
-
 	static void Main(string[] args)
 	{
+		// welcome
 		Console.WriteLine("Welcome to the Igpay Atinlay Translator!");
 
+		// main loop
 		for (bool run = true; run; run = PromptYesNo(true, "Would you like to translate another sentence?"))
 		{
 			Console.WriteLine("Please enter a sentence to translate");
 
+			// wait until valid input
 			string? output;
 			while (!TryConvertSentence(GetInput(), out output))
 				Console.WriteLine("Invalid input, please re-enter");
 
+			// write result
 			Console.WriteLine(output);
 		}
 	}
@@ -28,7 +30,7 @@ class Program
 		if (line is null)
 			return null;
 
-		return line.Trim().ToLowerInvariant();
+		return line.Trim();
 	}
 
 	// end is exclusive, start is inclusive
@@ -37,6 +39,7 @@ class Program
 		const string vowels = "AEIOUaeiou";
 
 		int start = position;
+		int initialCursor = cursor;
 		int vowelIndex = -1;
 		bool hasSymbol = false;
 
@@ -57,8 +60,7 @@ class Program
 					hasSymbol = true;
 
 					// move cursor to start of word
-					if (vowelIndex >= 0)
-						cursor -= position - start - 1;
+					cursor = initialCursor;
 
 					// go back and print as-is
 					for (int i = start; i < position; i++)
@@ -75,14 +77,19 @@ class Program
 					else
 						continue; // keep searching
 				}
-			}
 
-			// output letter as is
-			text[cursor++] = letter;
+				// output letter copying case
+				text[cursor++] = CopyCase(original[position - vowelIndex + start], letter);
+			}
+			else
+			{
+				// output letter as-is
+				text[cursor++] = letter;
+			}
 		}
 
 		// not empty and not containing symbols
-		if (position - start != 0 && !hasSymbol)
+		if (position != start && !hasSymbol)
 		{
 			// all consonants
 			if (vowelIndex < 0)
@@ -95,7 +102,7 @@ class Program
 			else
 			{
 				for (int i = start; i < vowelIndex; i++)
-					text[cursor++] = original[i];
+					text[cursor++] = CopyCase(original[cursor - initialCursor - 1], original[i]);
 			}
 
 			// suffix
@@ -111,6 +118,11 @@ class Program
 			text[cursor++] = original[position];
 			position++;
 		}
+	}
+
+	static char CopyCase(char original, char letter)
+	{
+		return char.IsUpper(original) ? char.ToUpper(letter) : char.ToLower(letter);
 	}
 
 	static bool TryConvertSentence(string? input, [NotNullWhen(true)] out string? converted)
