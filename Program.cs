@@ -115,6 +115,14 @@ class Program
 		ConverterState state = new(input, 0);
 		// fill string
 		converted = string.Create(input.Length * 4, state, ConvertSentence);
+
+		// invalid text
+		if (state.Position < 0)
+		{
+			converted = null;
+			return false;
+		}
+
 		// trim to size
 		converted = converted[..state.Position];
 
@@ -126,7 +134,7 @@ class Program
 		int cursor = 0;
 		while (state.Position < state.Original.Length)
 		{
-			if (!TryConvert(text, state.Original, ref state.Position, ref cursor))
+			if (TryConvert(text, state.Original, ref state.Position, ref cursor))
 			{
 				state.Position = -1;
 				return;
