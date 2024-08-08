@@ -8,12 +8,12 @@ class Program
 	{
 		Console.WriteLine("Welcome to the Igpay Atinlay Translator!");
 
-		for (bool run = true; run; run = PromptYesNo(true, "Would you like to translate another word?"))
+		for (bool run = true; run; run = PromptYesNo(true, "Would you like to translate another sentence?"))
 		{
-			Console.WriteLine("Please enter a word to translate");
+			Console.WriteLine("Please enter a sentence to translate");
 
 			string? output;
-			while (!TryConvert(GetInput(), out output))
+			while (!TryConvertSentence(GetInput(), out output))
 				Console.WriteLine("Invalid input, please re-enter");
 
 			Console.WriteLine(output);
@@ -29,17 +29,16 @@ class Program
 		return line.Trim().ToLowerInvariant();
 	}
 
-	static bool TryConvert(string? input, [NotNullWhen(true)] out string? converted)
+	static bool TryConvert(string input, [NotNullWhen(true)] out string? converted)
 	{
-		// set default output value
-		converted = null;
-
-		// blank, can't be used
-		if (input is null or "")
-			return false;
+		// no text
+		if (input is "")
+		{
+			converted = "";
+		}
 
 		// vowel
-		if (input[0] is 'a' or 'e' or 'i' or 'o' or 'u')
+		else if (input[0] is 'a' or 'e' or 'i' or 'o' or 'u')
 		{
 			converted = input + "way";
 		}
@@ -54,6 +53,30 @@ class Program
 				input[position..] + input[..position] + "ay"; // vowel position found
 		}
 
+		return true;
+	}
+
+	static bool TryConvertSentence(string? input, [NotNullWhen(true)] out string? converted)
+	{
+		// set default output value
+		converted = null;
+
+		// blank, can't be used
+		if (input is null or "")
+			return false;
+
+		string[] split = input.Split(' ');
+		string[] words = new string[split.Length];
+
+		for (int i = 0; i < split.Length; i++)
+		{
+			if (TryConvert(split[i], out string? output))
+				words[i] = output;
+			else
+				return false;
+		}
+
+		converted = string.Join(' ', words);
 		return true;
 	}
 
