@@ -61,38 +61,39 @@ class Program
 			if (char.IsWhiteSpace(letter) || IsPunctuation(letter))
 				break;
 
-			if (!hasSymbol) 
-			{
-				// symbol found
-				if (!IsValidLetter(letter))
-				{
-					hasSymbol = true;
 
-					// move cursor to start of word
-					cursor = initialCursor;
-
-					// go back and print as-is
-					for (int i = start; i < position; i++)
-						text[cursor++] = original[i];
-				}
-
-				// first vowel not yet found
-				else if (vowelIndex < 0)
-				{
-					if (vowels.Contains(letter))
-						vowelIndex = position; // set index
-					else
-						continue; // keep searching
-				}
-
-				// output letter copying case
-				text[cursor++] = CopyCase(original[position - vowelIndex + start], letter);
-			}
-			else
+			// word has symbol, don't translate
+			if (hasSymbol)
 			{
 				// output letter as-is
 				text[cursor++] = letter;
+				continue;
 			}
+
+			// symbol found
+			if (!IsValidLetter(letter))
+			{
+				hasSymbol = true;
+
+				// move cursor to start of word
+				cursor = initialCursor;
+
+				// go back and print as-is
+				for (int i = start; i < position; i++)
+					text[cursor++] = original[i];
+			}
+
+			// first vowel not yet found
+			else if (vowelIndex < 0)
+			{
+				if (vowels.Contains(letter))
+					vowelIndex = position; // set index
+				else
+					continue; // keep searching
+			}
+
+			// output letter copying case
+			text[cursor++] = CopyCase(original[position - vowelIndex + start], letter);
 		}
 
 		// not empty and not containing symbols
