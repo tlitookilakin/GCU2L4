@@ -12,6 +12,7 @@ class Program
 		// main loop
 		for (bool run = true; run; run = PromptYesNo(true, "Would you like to translate another sentence?"))
 		{
+			// prompt user
 			Console.WriteLine("Please enter a sentence to translate");
 
 			// wait until valid input
@@ -26,16 +27,24 @@ class Program
 
 	static string? GetInput()
 	{
+		// get output
 		var line = Console.ReadLine();
 		if (line is null)
 			return null;
 
+		// clean it up
 		return line.Trim();
 	}
 
-	// end is exclusive, start is inclusive
 	static void TryConvert(Span<char> text, string original, ref int position, ref int cursor)
 	{
+		/*Runs once for each "word".
+		* Searches the source string one letter at a time until
+		* it reaches the end, whitespace, or punctuation characters.
+		* Position defines the index to read from in the source string,
+		* while cursor defines the index to write to in the target string.
+		*/
+
 		const string vowels = "AEIOUaeiou";
 
 		int start = position;
@@ -65,8 +74,6 @@ class Program
 					// go back and print as-is
 					for (int i = start; i < position; i++)
 						text[cursor++] = original[i];
-
-					vowelIndex = -1;
 				}
 
 				// first vowel not yet found
@@ -112,7 +119,7 @@ class Program
 			text[cursor++] = 'y';
 		}
 
-		// add whitespace if necessary
+		// if it was terminated by a character, add that character
 		if (position < original.Length)
 		{
 			text[cursor++] = original[position];
@@ -122,11 +129,25 @@ class Program
 
 	static char CopyCase(char original, char letter)
 	{
+		// if the reference letter is uppercase, make the target letter uppercase, otherwise make it lowercase
 		return char.IsUpper(original) ? char.ToUpper(letter) : char.ToLower(letter);
 	}
 
 	static bool TryConvertSentence(string? input, [NotNullWhen(true)] out string? converted)
 	{
+		/*This uses string.Create() to do the entire thing in a single loop all at once
+		* It allows reading from and writing to a string after it is created but
+		* before it is made immutable. 
+		*/
+
+		/*The length is set to 2x + 4 because at most,
+		* a given word will be expanded from one letter to 4 letters (4x), but words
+		* must be separated by punctuation or whitespace characters, so at most half
+		* of the characters in a string can be pig latin words. 4 / 2 = 2. However with
+		* odd numbers of characters there may be one at the end terminated by the string
+		* length instead, so add 4 to account for that.
+		*/
+
 		// set default output value
 		converted = null;
 
@@ -137,7 +158,7 @@ class Program
 		// setup initial state
 		ConverterState state = new(input, 0);
 		// fill string
-		converted = string.Create(input.Length * 4, state, ConvertSentence);
+		converted = string.Create(input.Length * 2 + 4, state, ConvertSentence);
 		// trim to size
 		converted = converted[..state.Position];
 
@@ -146,6 +167,11 @@ class Program
 
 	static void ConvertSentence(Span<char> text, ConverterState state)
 	{
+		/*Position and Cursor are ref'd so that they carry over between words,
+		* so the loop is finite, and so the ending position of the outputted text
+		* can be recorded and re-used for trimming.
+		*/
+
 		int cursor = 0;
 
 		// iterate words, convert each
