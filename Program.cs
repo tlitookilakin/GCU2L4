@@ -36,7 +36,7 @@ class Program
 		return line.Trim();
 	}
 
-	static void TryConvert(Span<char> text, string original, ref int position, ref int cursor)
+	static void TryConvert(Span<char> text, ReadOnlySpan<char> original, ref int position, ref int cursor)
 	{
 		/*Runs once for each "word".
 		* Searches the source string one letter at a time until
@@ -75,12 +75,8 @@ class Program
 			{
 				hasSymbol = true;
 
-				// move cursor to start of word
-				cursor = initialCursor;
-
 				// go back and print as-is
-				for (int i = start; i < position; i++)
-					text[cursor++] = original[i];
+				original[start..position].CopyTo(text[initialCursor..]);
 			}
 
 			// first vowel not yet found
@@ -102,8 +98,9 @@ class Program
 			// all consonants
 			if (vowelIndex < 0)
 			{
-				for (int i = start; i < position; i++)
-					text[cursor++] = original[i];
+				int count = position - start;
+				original[start..position].CopyTo(text[cursor..]);
+				cursor += count;
 			}
 
 			// copy front of word
