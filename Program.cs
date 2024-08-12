@@ -76,7 +76,10 @@ class Program
 				hasSymbol = true;
 
 				// go back and print as-is
+				cursor++;
 				original[start..position].CopyTo(text[initialCursor..]);
+				text[cursor++] = letter;
+				continue;
 			}
 
 			// first vowel not yet found
